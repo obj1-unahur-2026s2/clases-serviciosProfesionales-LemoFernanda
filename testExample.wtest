@@ -1,9 +1,210 @@
-import example.pepita
+import example.*
 
-describe "group of tests for pepita" {
+// Etapa 1
+describe "Tests Etapa 1 - Servicios Profesionales" {
+// Universidades
+const sanMartin = new Universidad(provincia = "Buenos Aires", honorariosRecomendados = 3500)
+  const rosario = new Universidad(provincia = "Santa Fe", honorariosRecomendados = 2800)
+  const corrientes = new Universidad(provincia = "Corrientes", honorariosRecomendados = 4200)
+  const hurlingham = new Universidad(provincia = "Buenos Aires", honorariosRecomendados = 8800)
 
-  test "pepita has initial energy" {
-    assert.equals(100, pepita.energy())
+// Profesionales
+const  juana = new ProfesionalVinculado(universidad = rosario)
+const melina = new ProfesionalAsociado(universidad = corrientes)
+const rocio = new ProfesionalLibre(
+universidad = hurlingham,
+honorariosPorHora= 5000,
+provinciasDondePuedeTrabajar = ["Santa Fe", "Cordoba", "Buenos Aires"]
+)
+const luciana = new ProfesionalLibre(
+universidad = rosario,
+honorariosPorHora = 3200 ,
+provinciasDondePuedeTrabajar = [ "Santa Fe","Entre Rios"]
+)
+
+// Empresa
+  const empresa = new Empresa(honorarioDeReferencia = 3500)
+
+  method initialize() {
+    empresa.contratar(juana)
+    empresa.contratar(melina)
+    empresa.contratar(rocio)
+    empresa.contratar(luciana)
   }
 
+  test "Cantidad de profesionales según la universidad donde estudiaron" {
+    assert.equals(2, empresa.cuantosEstudiaronEn(rosario))
+    assert.equals(1, empresa.cuantosEstudiaronEn(hurlingham))
+    assert.equals(0, empresa.cuantosEstudiaronEn(sanMartin))
+  }
+
+  test "Profesionales caros (cobran más que el honorario de referencia)" {
+    assert.equals(#{rocio}, empresa.profesionalesCaros())
+  }
+
+  test "Universidades formadoras (sin repetidos)" {
+    assert.equals(#{rosario, corrientes, hurlingham}, empresa.universidadesFormadoras())
+  }
+
+  test "Profesional más barato" {
+    assert.equals(juana, empresa.profesionalMasBarato())
+  }
+
+  test "Es de gente acotada (todos trabajan en a lo sumo 3 provincias)" {
+    assert.that(empresa.esDeGenteAcotada())
+  }
+
+  test "Deja de ser gente acotada si a Luciana le agrego 2 provincias más" {
+    luciana.provinciasDondePuedeTrabajar(["Santa Fe", "Entre Rios", "Corrientes", "Misiones"])
+    assert.notThat(empresa.esDeGenteAcotada())
+  }
+}
+
+// Etapa 2
+
+
+describe "Tests Etapa 2 - Solicitantes" {
+  const rosario = new Universidad(provincia = "Santa Fe", honorariosRecomendados = 2800)
+  const corrientes = new Universidad(provincia = "Corrientes", honorariosRecomendados = 4200)
+
+  const juana = new ProfesionalVinculado(universidad = rosario)
+  const melina = new ProfesionalAsociado(universidad = corrientes)
+
+  const empresa = new Empresa(honorarioDeReferencia = 3500)
+
+  method initialize() {
+    empresa.contratar(juana)
+    empresa.contratar(melina)
+  }
+
+  test "Persona puede ser atendida" {
+    const persona = new Persona(provinciaDondeVive = "Santa Fe")
+    assert.that(empresa.puedeSatisfacer(persona))
+  }
+
+  test "Institución puede ser atendida" {
+    const institucion = new Institucion(universidadesReconocidas = [rosario])
+    assert.that(empresa.puedeSatisfacer(institucion))
+  }
+
+  test "Club puede ser atendido" {
+    const club = new Club(provinciasDondeEsta = ["Entre Rios", "Cordoba"])
+    assert.that(empresa.puedeSatisfacer(club))
+  }
+}
+
+// Etapa 3
+describe "Tests Etapa 3 - Cobros" {
+  const rosario = new Universidad(provincia = "Santa Fe", honorariosRecomendados = 2800)
+  const hurlingham = new Universidad(provincia = "Buenos Aires", honorariosRecomendados = 8800)
+
+  const juana = new ProfesionalVinculado(universidad = rosario)
+  const melina = new ProfesionalAsociado(universidad = rosario)
+  const rocio = new ProfesionalLibre(universidad = hurlingham, honorariosPorHora = 5000)
+  const nora = new ProfesionalLibre(universidad = rosario, honorariosPorHora = 4000)
+
+  test "Profesional vinculado le dona la mitad a la universidad" {
+    juana.cobrar(4000)
+    assert.equals(2000, rosario.totalDonaciones())
+  }
+
+  test "Profesional asociado dona todo a la Asociación del Litoral" {
+    melina.cobrar(3000)
+    assert.equals(3000, asociacionDelLitoral.totalRecaudado())
+  }
+
+  test "Profesional libre recauda todo para sí mismo" {
+    rocio.cobrar(5000)
+    assert.equals(5000, rocio.totalRecaudado())
+  }
+
+  test "Profesional libre le pasa dinero a otro libre" {
+    nora.cobrar(12000)
+    rocio.cobrar(10000)
+    
+    nora.pasarDinero(rocio, 4000)
+
+    assert.equals(8000, nora.totalRecaudado())
+    assert.equals(14000, rocio.totalRecaudado())
+  }
+}
+
+
+// Etapa 4
+
+describe "Tests Etapa 4 - Registro de Trabajos Hechos" {
+  const rosario = new Universidad(provincia = "Santa Fe", honorariosRecomendados = 2800)
+  const juana = new ProfesionalVinculado(universidad = rosario) // Cobra 2800, dona 1400 a Rosario
+  
+  const empresa = new Empresa(honorarioDeReferencia = 3500)
+  const persona = new Persona(provinciaDondeVive = "Santa Fe")
+
+  method initialize() {
+    empresa.contratar(juana)
+  }
+
+  test "Al dar servicio se cobra el honorario y se registra el cliente" {
+    empresa.darServicio(persona)
+
+    assert.equals(1, empresa.cuantosClientes())
+    assert.that(empresa.tieneComoCliente(persona))
+    assert.equals(1400, rosario.totalDonaciones()) // Juana cobró 2800 y le donó la mitad (1400) a Rosario
+  }
+
+  test "Si la empresa no puede atender al solicitante, no da servicio" {
+    const personaInaccesible = new Persona(provinciaDondeVive = "Chubut")
+    empresa.darServicio(personaInaccesible)
+
+    assert.equals(0, empresa.cuantosClientes())
+    assert.notThat(empresa.tieneComoCliente(personaInaccesible))
+  }
+}
+
+// Desafio final
+
+describe "Tests Desafío Final - Profesional poco atractivo" {
+  const rosario = new Universidad(provincia = "Santa Fe", honorariosRecomendados = 2800)
+  const hurlingham = new Universidad(provincia = "Buenos Aires", honorariosRecomendados = 8800)
+
+  // Juana cobra 2800 y trabaja solo en Santa Fe
+  const juana = new ProfesionalVinculado(universidad = rosario)
+  
+  // Barato: cobra 2000 y trabaja en Santa Fe y Entre Ríos
+  const barato = new ProfesionalLibre(
+    universidad = rosario, 
+    honorariosPorHora = 2000, 
+    provinciasDondePuedeTrabajar = ["Santa Fe", "Entre Ríos"]
+  )
+
+  // Caro: cobra 5000 y trabaja solo en Santa Fe
+  const caro = new ProfesionalLibre(
+    universidad = rosario, 
+    honorariosPorHora = 5000, 
+    provinciasDondePuedeTrabajar = ["Santa Fe"]
+  )
+
+  // profesionalUnico: cobra 6000 y trabaja en Buenos Aires
+  const profesionalUnico = new ProfesionalLibre(
+    universidad = hurlingham, 
+    honorariosPorHora = 6000, 
+    provinciasDondePuedeTrabajar = ["Buenos Aires"]
+  )
+
+  const empresa = new Empresa(honorarioDeReferencia = 3500)
+
+  method initialize() {
+    empresa.contratar(juana)
+    empresa.contratar(barato)
+    empresa.contratar(caro)
+    empresa.contratar(profesionalUnico)
+  }
+
+  test "Un profesional es poco atractivo si en todas sus provincias hay otro que cobra menos" {
+    // 'caro' trabaja solo en Santa Fe, y la empresa tiene a 'barato' que cobra 2000 (< 5000)
+    assert.that(empresa.esPocoAtractivo(caro))
+  }
+
+  test "Un profesional NO es poco atractivo si es el único disponible en alguna provincia" {
+    assert.notThat(empresa.esPocoAtractivo(profesionalUnico))
+  }
 }
